@@ -100,6 +100,12 @@ interface KiroStreamingToolCall {
 }
 
 const ENV_VAR_PATTERN = /^[A-Z_][A-Z0-9_]*$/;
+/**
+ * CodeWhisperer accepts a toolUseId of at most 64 characters from
+ * [A-Za-z0-9_-]; anything else is rejected with HTTP 400
+ * `{"message":"Invalid tool use format.","reason":"REQUEST_BODY_INVALID"}`.
+ */
+const KIRO_TOOL_USE_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const DEFAULT_MAX_OUTPUT_TOKENS = 32_000;
 const API_MAX_OUTPUT_TOKENS = 200_000;
 const KIRO_NAMESPACE = "34f7193f-561d-4050-bc84-9547d953d6bf";
@@ -157,6 +163,19 @@ function pruneKiroCliPromptScaffolding(text: string): string {
 function textFromContent(content: string | (TextContent | ImageContent)[], options?: { pruneKiroCliScaffolding?: boolean }): string {
   const text = typeof content === "string" ? content : content.map((part) => (part.type === "text" ? part.text : "[image omitted]")).join("");
   return options?.pruneKiroCliScaffolding ? pruneKiroCliPromptScaffolding(text) : text;
+}
+
+/**
+ * Rewrite a tool id another provider minted into one CodeWhisperer accepts.
+ *
+ * Switching models mid-conversation replays that history here, and ids such as
+ * OpenAI Codex's `call_x|fc_y` carry characters and lengths Kiro rejects. The
+ * rewrite is a pure function of the source id, so a tool call and its result
+ * land on the same id without threading a per-request map through the builder.
+ */
+function sanitizeKiroToolUseId(toolUseId: string): string {
+  if (KIRO_TOOL_USE_ID_PATTERN.test(toolUseId)) return toolUseId;
+  return `toolu_${createHash("sha1").update(toolUseId).digest("hex").slice(0, 32)}`;
 }
 
 function parseToolInput(value: unknown): Record<string, unknown> {
@@ -271,13 +290,13 @@ function assistantText(message: Extract<Context["messages"][number], { role: "as
 function assistantToolUses(message: Extract<Context["messages"][number], { role: "assistant" }>): Array<{ toolUseId: string; name: string; input: Record<string, unknown> }> | undefined {
   const toolUses = message.content
     .filter((part): part is ToolCall => part.type === "toolCall")
-    .map((part) => ({ toolUseId: part.id, name: part.name, input: parseToolInput(part.arguments) }));
+    .map((part) => ({ toolUseId: sanitizeKiroToolUseId(part.id), name: part.name, input: parseToolInput(part.arguments) }));
   return toolUses.length > 0 ? toolUses : undefined;
 }
 
 function toolResultFromMessage(message: Extract<Context["messages"][number], { role: "toolResult" }>): KiroToolResult {
   return {
-    toolUseId: message.toolCallId,
+    toolUseId: sanitizeKiroToolUseId(message.toolCallId),
     status: message.isError ? "error" : "success",
     content: [{ text: textFromContent(message.content) }],
   };
