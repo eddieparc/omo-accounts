@@ -40,10 +40,13 @@ function readJson(path: string): JsonRecord | undefined {
 
 function storedSlots(credential: JsonRecord): readonly JsonRecord[] {
 	const accounts = credential.accounts;
-	if (Array.isArray(accounts) && accounts.length > 0) {
-		return accounts.flatMap((value) => record(value) ?? []);
+	if (!Array.isArray(accounts) || accounts.length === 0) return [credential];
+	const slots: JsonRecord[] = [];
+	for (const value of accounts) {
+		const slot = record(value);
+		if (slot) slots.push(slot);
 	}
-	return [credential];
+	return slots;
 }
 
 function sourceOf(slot: JsonRecord): StockAccountStatus["source"] {
@@ -95,13 +98,18 @@ export function readStockAccountStatus(agentDir: string, now = Date.now()): Stoc
 	return statuses;
 }
 
-export function formatStockAccountStatus(statuses: readonly StockAccountStatus[]): string[] {
+export function formatStockAccountStatus(
+	statuses: readonly StockAccountStatus[],
+	usage: ReadonlyMap<string, string> = new Map(),
+): string[] {
 	if (statuses.length === 0) return [];
 	const width = Math.max(...statuses.map((status) => status.provider.length));
 	return statuses.map((status) => {
 		const state = status.blockReason ? "blocked (" + status.blockReason + ")" : status.state;
 		const marks = [status.provider.padEnd(width), status.name, status.source, state];
 		if (status.pinned) marks.push("pinned");
+		const usageDetail = usage.get(status.provider + "\0" + status.name);
+		if (usageDetail) marks.push(usageDetail);
 		if (status.expiresAt !== undefined) marks.push("expires", new Date(status.expiresAt).toISOString());
 		return marks.join("  ");
 	});

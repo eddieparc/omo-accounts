@@ -1,6 +1,7 @@
 import { isBlocked } from "./accounts.js";
 import { readPool } from "./store.js";
 import { formatStockAccountStatus, readStockAccountStatus } from "./stock-accounts.js";
+import { readStockUsage, type StockUsageOptions } from "./stock-usage.js";
 import type { ProviderBuildContext, ProviderPackage } from "./types.js";
 
 /** Usage dashboard for the Kiro accounts managed by this addon. */
@@ -53,9 +54,13 @@ async function addonLines(
 export async function buildUsageReport(
 	packages: readonly ProviderPackage[],
 	context: ProviderBuildContext,
+	options: StockUsageOptions = {},
 ): Promise<string> {
-	const addon = await addonLines(packages, context);
-	const stock = formatStockAccountStatus(readStockAccountStatus(context.agentDir));
+	const [addon, stockUsage] = await Promise.all([
+		addonLines(packages, context),
+		readStockUsage(context.agentDir, options),
+	]);
+	const stock = formatStockAccountStatus(readStockAccountStatus(context.agentDir), stockUsage);
 	if (addon.length === 0 && stock.length === 0) {
 		return "No managed subscriptions found. Add one with /login <provider>.";
 	}
