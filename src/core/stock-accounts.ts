@@ -135,6 +135,7 @@ export function formatStockAccountStatus(
 
 
 export interface StockCredentialStore {
+	read(provider: string): Promise<unknown>;
 	modify(
 		provider: string,
 		update: (current: unknown) => Promise<unknown>,

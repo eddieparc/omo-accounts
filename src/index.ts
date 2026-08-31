@@ -9,6 +9,7 @@ import type {
 	SenpiExtensionAPI,
 } from "./core/types.js";
 import { migrationSink } from "./core/migration-sink.js";
+import { runStockAccountCommand, stockAccountInteraction } from "./core/stock-account-command.js";
 import { buildUsageReport } from "./core/usage.js";
 
 export type { ProviderPackage, ProviderHealth, ProviderBuildContext } from "./core/types.js";
@@ -74,6 +75,23 @@ export default async function omoAccounts(pi: SenpiExtensionAPI): Promise<void> 
 		description: "Show remaining usage across configured Kiro accounts.",
 		handler: async (_args: string, ctx: ExtensionCommandContext) => {
 			ctx.ui.notify(await buildUsageReport(registered, context), "info");
+		},
+	});
+
+	pi.registerCommand("omo-account", {
+		description: "Manage stock Claude and OpenAI OAuth accounts.",
+		argumentHint: "<claude-sdk-oauth|openai-codex> [list|usage|rename <from> <to>|relogin <name>]",
+		handler: async (args: string, ctx: ExtensionCommandContext) => {
+			const output = await runStockAccountCommand(
+				{
+					agentDir: ctx.agentDir,
+					store: ctx.modelRegistry.authStorage,
+					runtime: ctx.modelRegistry.modelRuntime,
+					interaction: stockAccountInteraction(ctx),
+				},
+				args,
+			);
+			ctx.ui.notify(output.text, output.level);
 		},
 	});
 
