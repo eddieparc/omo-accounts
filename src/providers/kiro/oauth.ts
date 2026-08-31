@@ -183,7 +183,7 @@ async function startCallbackServer(authMethod: "google" | "github"): Promise<Cal
 		response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", Connection: "close" });
 		response.end(
 			"<!doctype html><meta charset=utf-8><title>Kiro sign-in complete</title>" +
-				"<h1>Kiro sign-in complete</h1><p>You can close this tab and return to senpi.</p>",
+			"<h1>Kiro sign-in complete</h1><p>You can close this tab and return to OMO.</p>",
 		);
 	});
 
@@ -282,7 +282,7 @@ async function loginSocial(authMethod: "google" | "github", callbacks: LoginCall
 		callbacks.onAuth({
 			url: authorizeUrl,
 			instructions: server
-				? `Sign in to Kiro with ${KIRO_AUTH_METHOD_LABELS[authMethod]}. senpi captures the callback automatically; paste the callback URL only if that fails.`
+			? `Sign in to Kiro with ${KIRO_AUTH_METHOD_LABELS[authMethod]}. OMO captures the callback automatically; paste the callback URL only if that fails.`
 				: `Sign in to Kiro with ${KIRO_AUTH_METHOD_LABELS[authMethod]}, then paste the full callback URL.`,
 		});
 		callbacks.onProgress?.("Waiting for the Kiro sign-in callback...");

@@ -38,11 +38,11 @@ if (blocks.length === 0) {
 	process.exit(1);
 }
 
-const home = mkdtempSync(resolve(tmpdir(), "senpi-accounts-doc-check-"));
+const home = mkdtempSync(resolve(tmpdir(), "omo-accounts-doc-check-"));
 // The README's install blocks install packages and clone the repository. Running them
 // in the repository root would rewrite package.json and leave a nested checkout behind,
 // so they get a scratch working directory of their own.
-const workdir = mkdtempSync(resolve(tmpdir(), "senpi-accounts-doc-work-"));
+const workdir = mkdtempSync(resolve(tmpdir(), "omo-accounts-doc-work-"));
 const script = ["set -eu", ...blocks.map((block, index) => `# README command block ${index + 1}\n${block}`)];
 if (command) {
 	script.push(`# injected verification command\n${command}`);
@@ -56,7 +56,8 @@ try {
 		env: {
 			...process.env,
 			HOME: home,
-			SENPI_CODING_AGENT_DIR: resolve(home, ".senpi", "agent"),
+			OMO_CODING_AGENT_DIR: resolve(home, ".omo", "agent"),
+			SENPI_CODING_AGENT_DIR: resolve(home, ".omo", "agent"),
 			NO_COLOR: "1",
 			PI_OFFLINE: "1",
 			PI_TELEMETRY: "0",

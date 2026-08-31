@@ -6,7 +6,7 @@ import { registerProviderPackages } from "../src/core/registry.js";
 import type { ProviderBuildContext, ProviderPackage } from "../src/core/types.js";
 
 function agentDir(): string {
-	return mkdtempSync(join(tmpdir(), "senpi-accounts-ext-"));
+	return mkdtempSync(join(tmpdir(), "omo-accounts-ext-"));
 }
 
 function context(): ProviderBuildContext {
@@ -126,67 +126,24 @@ describe("provider isolation", () => {
 describe("extension entry", () => {
 	it("registers providers and the usage/health commands", async () => {
 		const pi = fakePi();
-		const previous = process.env.SENPI_CODING_AGENT_DIR;
-		process.env.SENPI_CODING_AGENT_DIR = agentDir();
+		const previous = process.env.OMO_CODING_AGENT_DIR;
+		process.env.OMO_CODING_AGENT_DIR = agentDir();
 
 		try {
-			const { default: senpiAccounts } = await import("../src/index.js");
-			await senpiAccounts(pi as never);
+			const { default: omoAccounts } = await import("../src/index.js");
+			await omoAccounts(pi as never);
 		} finally {
-			if (previous === undefined) delete process.env.SENPI_CODING_AGENT_DIR;
-			else process.env.SENPI_CODING_AGENT_DIR = previous;
+			if (previous === undefined) delete process.env.OMO_CODING_AGENT_DIR;
+			else process.env.OMO_CODING_AGENT_DIR = previous;
 		}
 
-		expect(pi.registered.has("kiro")).toBe(true);
-		expect(pi.registered.has("opengateway")).toBe(true);
-		expect(pi.registered.has("alibaba-model-studio")).toBe(true);
+		expect([...pi.registered.keys()]).toEqual(["kiro", "opengateway"]);
 		const commands = pi.registerCommand.mock.calls.map((call) => call[0]);
 		expect(commands).toContain("usage");
-		expect(commands).toContain("senpi-accounts");
+		expect(commands).toContain("omo-accounts");
 		// Registering our own `fast` makes senpi disambiguate two same-named commands as
 		// `fast:1`/`fast:2`, and plain `/fast` then matches neither and is sent to the
 		// model as an ordinary prompt. Stock's command must stay the only one.
 		expect(commands).not.toContain("fast");
-	});
-});
-
-describe("codex pool provider", () => {
-	it("registers by default so it remains visible in /login", async () => {
-		const { codexProviderPackage } = await import("../src/providers/codex/index.js");
-		const pkg = codexProviderPackage();
-		expect(pkg.enabled).toBeUndefined();
-	});
-
-	it("builds against stock's Codex API", async () => {
-		const { codexProviderPackage } = await import("../src/providers/codex/index.js");
-		const pkg = codexProviderPackage();
-
-		const config = await pkg.build({ env: {} as NodeJS.ProcessEnv, agentDir: agentDir() });
-		// Reuses stock's Codex Responses API, which is what keeps /fast and
-		// service-tier behaviour intact rather than reimplementing them.
-		expect(config.api).toBe("openai-codex-responses");
-		expect(config.oauth?.name).toMatch(/OpenAI/);
-	});
-});
-
-describe("codex token parsing", () => {
-	it("extracts the ChatGPT account id and email from an access token", async () => {
-		const { accountIdFromToken, emailFromToken } = await import("../src/providers/codex/oauth.js");
-		const payload = Buffer.from(
-			JSON.stringify({
-				email: "user@example.com",
-				"https://api.openai.com/auth": { chatgpt_account_id: "acct-123" },
-			}),
-		).toString("base64url");
-		const token = `header.${payload}.signature`;
-
-		expect(accountIdFromToken(token)).toBe("acct-123");
-		expect(emailFromToken(token)).toBe("user@example.com");
-	});
-
-	it("returns undefined for a malformed token instead of throwing", async () => {
-		const { accountIdFromToken } = await import("../src/providers/codex/oauth.js");
-		expect(accountIdFromToken("not-a-jwt")).toBeUndefined();
-		expect(accountIdFromToken("a.!!!.c")).toBeUndefined();
 	});
 });

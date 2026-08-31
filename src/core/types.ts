@@ -23,7 +23,7 @@ export type ProviderHealth =
 
 export interface ProviderBuildContext {
 	readonly env: NodeJS.ProcessEnv;
-	/** Absolute path to the senpi agent directory (`~/.senpi/agent` by default). */
+	/** Absolute path to OMO's Senpi agent directory (`~/.omo/agent` by default). */
 	readonly agentDir: string;
 }
 
@@ -32,7 +32,7 @@ export interface ProviderBuildContext {
  * owns its credentials and failure modes, and never imports a sibling.
  */
 export interface ProviderPackage {
-	/** Provider id registered with senpi; also the `/login <id>` name. */
+	/** Provider id registered with OMO's Senpi engine; also the `/login <id>` name. */
 	readonly id: string;
 	/** Human-readable label used in diagnostics. */
 	readonly label: string;
@@ -42,7 +42,7 @@ export interface ProviderPackage {
 	 * so a package can also refuse on credential state, not just on env.
 	 */
 	enabled?(env: NodeJS.ProcessEnv, context?: ProviderBuildContext): true | string;
-	/** Build the senpi provider config. Throwing here degrades only this package. */
+	/** Build the Senpi provider config. Throwing here degrades only this package. */
 	build(context: ProviderBuildContext): ProviderConfig | Promise<ProviderConfig>;
 	/**
 	 * Run the provider's interactive login and return the slot to store.

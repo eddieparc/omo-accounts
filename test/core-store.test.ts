@@ -8,7 +8,7 @@ import { deletePool, readPool, SENTINEL, updatePool, writePool, writePoolTransit
 const dirs: string[] = [];
 
 function agentDir(): string {
-	const dir = mkdtempSync(join(tmpdir(), "senpi-accounts-store-"));
+	const dir = mkdtempSync(join(tmpdir(), "omo-accounts-store-"));
 	dirs.push(dir);
 	return dir;
 }

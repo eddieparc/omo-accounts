@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import senpiAccounts from "../src/index.js";
+import omoAccounts from "../src/index.js";
 
 function fakePi() {
 	const handlers = new Map<string, (event: unknown, ctx: unknown) => unknown>();
@@ -30,16 +30,16 @@ function uiCtx() {
 describe("the extension attaches a UI context for migration notices", () => {
 	it("subscribes to a session lifecycle event so a provider can notify later", async () => {
 		const pi = fakePi();
-		process.env.SENPI_CODING_AGENT_DIR = mkdtempSync(join(tmpdir(), "senpi-accounts-attach-"));
-		await senpiAccounts(pi as never);
+		process.env.OMO_CODING_AGENT_DIR = mkdtempSync(join(tmpdir(), "omo-accounts-attach-"));
+		await omoAccounts(pi as never);
 		console.log(`subscribed events -> ${[...pi.handlers.keys()].join(", ")}`);
 		expect(pi.handlers.has("session_start")).toBe(true);
 	});
 
 	it("routes a provider notice to the attached context", async () => {
 		const pi = fakePi();
-		process.env.SENPI_CODING_AGENT_DIR = mkdtempSync(join(tmpdir(), "senpi-accounts-attach-"));
-		await senpiAccounts(pi as never);
+		process.env.OMO_CODING_AGENT_DIR = mkdtempSync(join(tmpdir(), "omo-accounts-attach-"));
+		await omoAccounts(pi as never);
 
 		const handler = pi.handlers.get("session_start");
 		if (!handler) throw new Error("no session_start handler was registered");

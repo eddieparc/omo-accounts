@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 /**
  * Optional macOS Keychain storage for account pools.
  *
- * Off by default: pools live in senpi's `auth.json`, written atomically with
+ * Off by default: pools live in OMO's Senpi `auth.json`, written atomically with
  * `0600`, which is the same protection stock uses. Keychain is offered for
  * users who want credentials out of the filesystem entirely, and is only used
  * when {@link keychainAvailable} confirms a working round-trip — a silent

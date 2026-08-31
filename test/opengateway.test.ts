@@ -8,7 +8,7 @@ import {
 
 const context = {
 	env: {} as NodeJS.ProcessEnv,
-	agentDir: "/tmp/senpi-accounts-opengateway",
+	agentDir: "/tmp/omo-accounts-opengateway",
 };
 
 describe("opengateway provider package", () => {

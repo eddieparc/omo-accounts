@@ -4,7 +4,7 @@
  * `/login kiro` is the interactive path; this is the same flow driven from a
  * terminal so it can be automated (CI, QA, or headless setup). It prints the
  * authorize URL, waits for the localhost callback, then appends the account to
- * the pool in `SENPI_CODING_AGENT_DIR`.
+ * the pool in `OMO_CODING_AGENT_DIR`.
  *
  *   npx tsx scripts/login.mts <account-name> [google|github|builder-id]
  */
@@ -16,10 +16,10 @@ import { tokensToSlot } from "../src/providers/kiro/provider.ts";
 
 const name = process.argv[2];
 const method = (process.argv[3] ?? "google") as "google" | "github" | "builder-id";
-const agentDir = process.env.SENPI_CODING_AGENT_DIR;
+const agentDir = process.env.OMO_CODING_AGENT_DIR ?? process.env.SENPI_CODING_AGENT_DIR;
 
 if (!name) throw new Error("usage: login.mts <account-name> [google|github|builder-id]");
-if (!agentDir) throw new Error("SENPI_CODING_AGENT_DIR must be set");
+if (!agentDir) throw new Error("OMO_CODING_AGENT_DIR must be set");
 
 const tokens = await loginKiro(
 	{

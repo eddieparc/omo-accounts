@@ -10,7 +10,7 @@ import {
 } from "../src/providers/tokenrouter/index.js";
 
 function agentDirWith(auth: Record<string, unknown>): string {
-	const dir = mkdtempSync(resolve(tmpdir(), "senpi-accounts-tokenrouter-"));
+	const dir = mkdtempSync(resolve(tmpdir(), "omo-accounts-tokenrouter-"));
 	writeFileSync(join(dir, "auth.json"), JSON.stringify(auth));
 	return dir;
 }
@@ -85,10 +85,6 @@ describe("tokenrouter provider package", () => {
 	});
 
 	it("declares the dialect limits TokenRouter actually rejects", () => {
-		// Measured against the live endpoint: role "developer" answers HTTP 400
-		// "role 'developer' is not allowed", and `store: false` answers HTTP 200 with a
-		// whitespace body and no completion. senpi sends both by default for an
-		// `openai-completions` provider, which turned a working curl into a 422 turn.
 		for (const model of TOKENROUTER_MODELS) {
 			expect(model.compat.supportsDeveloperRole).toBe(false);
 			expect(model.compat.supportsStore).toBe(false);

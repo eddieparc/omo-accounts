@@ -74,7 +74,7 @@ describe("Kiro usage token refresh", () => {
 
 describe("Kiro provider streaming", () => {
 	it("does not let a stale successful turn erase another turn's persisted block", async () => {
-		const agentDir = mkdtempSync(join(tmpdir(), "senpi-accounts-concurrent-"));
+		const agentDir = mkdtempSync(join(tmpdir(), "omo-accounts-concurrent-"));
 		try {
 			writePool(agentDir, "kiro", pool());
 			const common = { usage: { get: () => undefined, refresh: async () => ({}) } };
@@ -133,7 +133,7 @@ describe("Kiro provider streaming", () => {
 			},
 		};
 		const writePoolState = vi.fn();
-		const streamSimple = createKiroStreamSimple("/tmp/senpi-accounts-test", {
+		const streamSimple = createKiroStreamSimple("/tmp/omo-accounts-test", {
 			readPoolState: () => pool(),
 			writePoolState,
 			usage: { get: () => undefined, refresh: async () => ({}) },
@@ -154,7 +154,7 @@ describe("Kiro provider streaming", () => {
 
 	it("persists a pre-delta rate-limit block when every account fails", async () => {
 		const writePoolState = vi.fn();
-		const streamSimple = createKiroStreamSimple("/tmp/senpi-accounts-test", {
+		const streamSimple = createKiroStreamSimple("/tmp/omo-accounts-test", {
 			readPoolState: () => pool(),
 			writePoolState,
 			usage: { get: () => undefined, refresh: async () => ({}) },
@@ -181,7 +181,7 @@ describe("Kiro provider streaming", () => {
 					yield { type: "error", error: { errorMessage: "HTTP 429: rate limited" } };
 				})() as unknown as AssistantMessageEventStream,
 		);
-		const streamSimple = createKiroStreamSimple("/tmp/senpi-accounts-test", {
+		const streamSimple = createKiroStreamSimple("/tmp/omo-accounts-test", {
 			readPoolState: () => pool(["primary", "secondary"]),
 			writePoolState,
 			usage: { get: () => undefined, refresh: async () => ({}) },
@@ -212,7 +212,7 @@ describe("Kiro provider streaming", () => {
 	it("passes an opt-in diagnostic logger to the vendored stream", async () => {
 		const logger = { debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 		let receivedLogger: unknown;
-		const streamSimple = createKiroStreamSimple("/tmp/senpi-accounts-test", {
+		const streamSimple = createKiroStreamSimple("/tmp/omo-accounts-test", {
 			readPoolState: () => pool(),
 			writePoolState: vi.fn(),
 			usage: { get: () => undefined, refresh: async () => ({}) },
@@ -247,7 +247,7 @@ describe("Kiro provider streaming", () => {
 				yield { type: "text_delta", delta: "healthy" };
 			})() as unknown as AssistantMessageEventStream;
 		});
-		const streamSimple = createKiroStreamSimple("/tmp/senpi-accounts-test", {
+		const streamSimple = createKiroStreamSimple("/tmp/omo-accounts-test", {
 			readPoolState: () => pool(["primary", "secondary"]),
 			writePoolState,
 			usage: { get: () => undefined, refresh: async () => ({}) },
@@ -280,7 +280,7 @@ describe("Kiro provider streaming", () => {
 				};
 			},
 		};
-		const streamSimple = createKiroStreamSimple("/tmp/senpi-accounts-test", {
+		const streamSimple = createKiroStreamSimple("/tmp/omo-accounts-test", {
 			readPoolState: () => pool(),
 			writePoolState: vi.fn(),
 			usage: { get: () => undefined, refresh: async () => ({}) },
@@ -309,7 +309,7 @@ describe("Kiro provider streaming", () => {
 				};
 			},
 		};
-		const streamSimple = createKiroStreamSimple("/tmp/senpi-accounts-test", {
+		const streamSimple = createKiroStreamSimple("/tmp/omo-accounts-test", {
 			readPoolState: () => pool(),
 			writePoolState: vi.fn(),
 			usage: { get: () => undefined, refresh: async () => ({}) },

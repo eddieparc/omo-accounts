@@ -10,7 +10,7 @@ import { createKiroStreamSimple, kiroProviderPackage, type KiroTokens } from "..
 const dirs: string[] = [];
 
 function agentDir(): string {
-	const dir = mkdtempSync(join(tmpdir(), "senpi-accounts-logout-"));
+	const dir = mkdtempSync(join(tmpdir(), "omo-accounts-logout-"));
 	dirs.push(dir);
 	return dir;
 }

@@ -18,7 +18,7 @@ const slot = (name: string): AccountSlot => ({
 
 let dir: string;
 beforeEach(() => {
-	dir = mkdtempSync(join(tmpdir(), "senpi-accounts-usage-"));
+	dir = mkdtempSync(join(tmpdir(), "omo-accounts-usage-"));
 });
 afterEach(() => {
 	rmSync(dir, { recursive: true, force: true });
