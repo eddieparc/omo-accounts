@@ -10,7 +10,7 @@ credential flow.
 
 ## Install
 
-Requires OMO with Senpi `>= 2026.8.24`.
+Requires OMO with Senpi `>= 2026.8.31`.
 
 ```bash
 omo install npm:@eddieparc/senpi-accounts
@@ -83,12 +83,41 @@ the provider login flow in a run where it is explicitly loaded:
 The bundled catalogs expose OpenGateway's Kimi K3 Ultrafast and TokenRouter's Kimi,
 DeepSeek, Qwen, and GLM routes.
 
+## Stock Claude and OpenAI accounts
+
+OMO's stock credential pool already rotates multiple OAuth accounts. This addon adds
+one provider-neutral management surface for the operations stock OMO does not expose:
+
+```text
+/omo-account claude-sdk-oauth list
+/omo-account claude-sdk-oauth usage
+/omo-account claude-sdk-oauth rename login-2 work
+/omo-account claude-sdk-oauth relogin work
+
+/omo-account openai-codex list
+/omo-account openai-codex usage
+/omo-account openai-codex rename login-2 work
+/omo-account openai-codex relogin work
+```
+
+`list` reports non-secret account names, source, pin, expiry, and persisted block
+state. `rename` changes one stored slot without changing its credential material or
+siblings. `relogin` runs the provider's normal OAuth flow and replaces only the named
+slot; environment-backed slots cannot be renamed or re-logged in.
+
+OpenAI Codex usage is read per account from ChatGPT's usage endpoint and reports the
+5-hour and weekly remaining percentages. Claude exposes no supported preflight quota
+endpoint, so its usage output deliberately says numeric quota is unavailable instead
+of spending tokens on synthetic probes. Claude block and expiry status still reflects
+OMO's reactive failover state.
+
 ## Commands
 
 | Command | Purpose |
 |---|---|
 | `/login kiro` | Manage Kiro accounts and routing settings |
-| `/usage` | Show remaining Kiro usage and account state |
+| `/usage` | Show managed provider usage and account state |
+| `/omo-account <provider> ...` | List, inspect, rename, or re-login stock OAuth accounts |
 | `/omo-accounts` | Show extension health |
 
 ## Storage and diagnostics
