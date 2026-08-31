@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 async function captureLogger(debug: boolean): Promise<{ agentDir: string; logger: DebugLogger }> {
-	const agentDir = mkdtempSync(join(tmpdir(), "senpi-accounts-debug-"));
+	const agentDir = mkdtempSync(join(tmpdir(), "omo-accounts-debug-"));
 	directories.push(agentDir);
 	let logger: DebugLogger | undefined;
 	const provider = buildKiroProviderConfig(

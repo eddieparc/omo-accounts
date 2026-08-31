@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const MINIMUM_SENPI_VERSION = "2026.8.3-3";
+const MINIMUM_SENPI_VERSION = "2026.8.31";
 
 describe("child-agent provider routing contract", () => {
 	it("requires the Senpi runtime that preserves addon providers in child sessions", () => {

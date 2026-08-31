@@ -1,17 +1,3 @@
-/**
- * Model catalog for the `tokenrouter` provider.
- *
- * An extension-registered provider id has no built-in catalog to inherit, so a
- * provider without a `models` array registers "successfully" with zero models
- * and `--provider tokenrouter` then fails with `Unknown provider`.
- *
- * TokenRouter is a router: its upstream list changes often, and `GET /v1/models`
- * returns ids only — no context window, no pricing. Those are the two things
- * senpi needs to budget a turn, so this file pins the models actually worth
- * routing through and `TOKENROUTER_MODELS_OVERRIDE` lets a user add more without
- * a code change. Costs are per-million tokens, matching stock's catalog.
- */
-
 export interface TokenRouterModel {
 	id: string;
 	name: string;
@@ -30,18 +16,6 @@ export interface TokenRouterModel {
 	};
 }
 
-/**
- * TokenRouter speaks the OpenAI wire format but not OpenAI's newer dialect.
- * Measured against the live endpoint with a real key:
- *
- *   role: "developer"  -> HTTP 400 "role 'developer' is not allowed"
- *   store: false       -> HTTP 200 but the body is whitespace, no completion
- *
- * senpi sends both by default for an `openai-completions` provider, which is why
- * a turn came back as `422 openai_error` while a plain curl succeeded. Every
- * model therefore carries the conservative compat profile, the same way stock's
- * llama.cpp provider does for its OpenAI-compatible server.
- */
 const COMPAT = {
 	supportsStore: false,
 	supportsDeveloperRole: false,
@@ -53,7 +27,6 @@ const COMPAT = {
 
 export const TOKENROUTER_MODELS: TokenRouterModel[] = [
 	{
-		// Free during TokenRouter's launch promotion, hence cost 0 across the board.
 		id: "moonshotai/kimi-k3-free",
 		name: "Kimi K3 (free)",
 		reasoning: true,
@@ -105,14 +78,6 @@ export const TOKENROUTER_MODELS: TokenRouterModel[] = [
 	},
 ];
 
-/**
- * Catalog for this run.
- *
- * `TOKENROUTER_MODELS_OVERRIDE` takes a comma-separated list of TokenRouter
- * model ids. Unknown ids get conservative defaults rather than being dropped:
- * the router accepts them, so refusing to register them would be the addon
- * second-guessing the upstream.
- */
 export function resolveTokenRouterModels(env: NodeJS.ProcessEnv): TokenRouterModel[] {
 	const override = env.TOKENROUTER_MODELS_OVERRIDE?.trim();
 	if (!override) return TOKENROUTER_MODELS;

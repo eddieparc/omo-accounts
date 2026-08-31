@@ -73,7 +73,7 @@ async function collectEvents(frames: Uint8Array[]): Promise<Record<string, unkno
 		});
 		return new Response(body, { status: 200 });
 	});
-	const logger = new DebugLogger({ extensionRoot: "/tmp/senpi-accounts-test", debug: false });
+	const logger = new DebugLogger({ extensionRoot: "/tmp/omo-accounts-test", debug: false });
 	const stream = createKiroStream(
 		{
 			providerId: "kiro",

@@ -118,7 +118,7 @@ describe("Kiro vendor integration", () => {
 			});
 			return new Response(body, { status: 200 });
 		});
-		const logger = new DebugLogger({ extensionRoot: "/tmp/senpi-accounts-test", debug: false });
+		const logger = new DebugLogger({ extensionRoot: "/tmp/omo-accounts-test", debug: false });
 		const logError = vi.spyOn(logger, "error");
 		const stream = createKiroStream(
 			{

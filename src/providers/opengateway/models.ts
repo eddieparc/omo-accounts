@@ -1,10 +1,3 @@
-/**
- * OpenGateway's public catalog confirms that Kimi K3 Ultrafast accepts text and
- * images and supports Chat Completions. It does not publish token limits or
- * pricing, so the limits match Kimi K3 in senpi's other gateway catalogs and
- * costs stay zero rather than inventing billing data.
- */
-
 export interface OpenGatewayModel {
 	id: string;
 	name: string;

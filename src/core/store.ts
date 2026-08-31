@@ -5,8 +5,8 @@ import { lockSync } from "proper-lockfile";
 import type { AccountPoolState, AccountSlot, SelectionStrategy } from "./accounts.js";
 
 /**
- * Account pools are persisted inside senpi's own `auth.json`, under the
- * provider's key, using the same field names stock senpi uses for the Claude
+ * Account pools are persisted inside OMO's Senpi `auth.json`, under the
+ * provider's key, using the same field names the engine uses for the Claude
  * Agent SDK (`accounts`, `pinned`). Senpi treats the record as an opaque OAuth
  * credential, so the sentinel `access`/`refresh` keep it a valid credential
  * while the real per-account material lives in `accounts`.
@@ -53,7 +53,7 @@ function readAuthFile(agentDir: string): Record<string, unknown> {
 		// every other provider's credentials along with this one's.
 		throw new Error(
 			`Cannot parse ${path}: ${error instanceof Error ? error.message : String(error)}. ` +
-				"Fix or move the file; senpi-accounts will not overwrite it.",
+				"Fix or move the file; omo-accounts will not overwrite it.",
 		);
 	}
 }

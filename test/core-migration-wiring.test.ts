@@ -41,7 +41,7 @@ const SESSION = "sess-wiring";
 async function drive(state: AccountPoolState, onMigration: (providerId: string, notice: unknown) => void) {
 	let saved = state;
 	let used = "";
-	const streamSimple = createKiroStreamSimple("/tmp/senpi-accounts-wiring", {
+	const streamSimple = createKiroStreamSimple("/tmp/omo-accounts-wiring", {
 		readPoolState: () => saved,
 		writePoolState: (_dir, _id, next) => {
 			saved = next;
@@ -65,7 +65,7 @@ async function drive(state: AccountPoolState, onMigration: (providerId: string, 
 
 async function driveCompaction(state: AccountPoolState) {
 	let saved = state;
-	const streamSimple = createKiroStreamSimple("/tmp/senpi-accounts-wiring", {
+	const streamSimple = createKiroStreamSimple("/tmp/omo-accounts-wiring", {
 		readPoolState: () => saved,
 		writePoolState: (_dir, _id, next) => {
 			saved = next;

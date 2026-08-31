@@ -1,22 +1,25 @@
 {
   "name": "@eddieparc/senpi-accounts",
-  "version": "0.4.5",
-  "description": "Senpi addon: multi-account subscription providers (Kiro) with cache-preserving routing, usage-aware placement and 429 failover.",
+  "version": "0.5.0",
+  "description": "OMO addon for Kiro account routing plus OpenGateway and TokenRouter providers.",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eddieparc/senpi-accounts.git"
+    "url": "git+https://github.com/eddieparc/omo-accounts.git"
   },
-  "homepage": "https://github.com/eddieparc/senpi-accounts#readme",
+  "homepage": "https://github.com/eddieparc/omo-accounts#readme",
   "bugs": {
-    "url": "https://github.com/eddieparc/senpi-accounts/issues"
+    "url": "https://github.com/eddieparc/omo-accounts/issues"
   },
   "keywords": [
     "pi-package",
+    "omo",
+    "omo-extension",
     "senpi",
-    "senpi-extension",
     "kiro",
+    "opengateway",
+    "tokenrouter",
     "multi-account",
     "provider-accounts"
   ],
@@ -41,13 +44,13 @@
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "peerDependencies": {
-    "@code-yeongyu/senpi": ">=2026.8.3-3"
+    "@code-yeongyu/senpi": ">=2026.8.31"
   },
   "dependencies": {
     "proper-lockfile": "4.1.2"
   },
   "devDependencies": {
-    "@code-yeongyu/senpi": "2026.8.3-3",
+    "@code-yeongyu/senpi": "2026.8.31",
     "@types/node": "^24.13.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"

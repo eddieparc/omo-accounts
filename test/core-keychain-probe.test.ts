@@ -20,7 +20,7 @@ runOnMac("keychain availability probe", () => {
 	let originalPath: string | undefined;
 
 	beforeEach(() => {
-		shimDir = mkdtempSync(resolve(tmpdir(), "senpi-accounts-security-shim-"));
+		shimDir = mkdtempSync(resolve(tmpdir(), "omo-accounts-security-shim-"));
 		logPath = resolve(shimDir, "calls.log");
 		const shim = resolve(shimDir, "security");
 		writeFileSync(
