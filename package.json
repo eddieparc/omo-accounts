@@ -44,13 +44,13 @@
     "prepublishOnly": "npm run typecheck && npm run test && npm run build"
   },
   "peerDependencies": {
-    "@code-yeongyu/senpi": ">=2026.8.24"
+    "@code-yeongyu/senpi": ">=2026.8.31"
   },
   "dependencies": {
     "proper-lockfile": "4.1.2"
   },
   "devDependencies": {
-    "@code-yeongyu/senpi": "2026.8.24",
+    "@code-yeongyu/senpi": "2026.8.31",
     "@types/node": "^24.13.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.10"

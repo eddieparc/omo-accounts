@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { resolveAgentDir } from "../src/index.js";
 import { SENTINEL } from "../src/core/store.js";
 
-const TARGET_SENPI_VERSION = "2026.8.24";
+const TARGET_SENPI_VERSION = "2026.8.31";
 
 describe("omo-accounts migration contract", () => {
 	it("keeps the published npm identity while targeting the embedded Senpi engine", () => {
