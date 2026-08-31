@@ -1,4 +1,4 @@
-import { assertStockAccountName, isStockAccountProvider } from "./stock-accounts.js";
+import { assertStockAccountName, isStockAccountProvider } from "./stock-account-rename.js";
 
 type JsonRecord = Readonly<Record<string, unknown>>;
 
@@ -42,10 +42,12 @@ export interface ReloginStockAccountOptions {
 	readonly interaction: ReloginInteraction;
 }
 
+function isRecord(value: unknown): value is JsonRecord {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function record(value: unknown): JsonRecord | undefined {
-	return typeof value === "object" && value !== null && !Array.isArray(value)
-		? (value as JsonRecord)
-		: undefined;
+	return isRecord(value) ? value : undefined;
 }
 
 function stringField(value: JsonRecord, key: string): string | undefined {

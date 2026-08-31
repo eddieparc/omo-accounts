@@ -1,11 +1,9 @@
 import type { ExtensionCommandContext } from "@code-yeongyu/senpi";
 import {
 	formatStockAccountStatus,
-	isStockAccountProvider,
 	readStockAccountStatus,
-	renameStockAccount,
-	type StockCredentialStore,
 } from "./stock-accounts.js";
+import { isStockAccountProvider, renameStockAccount, type StockCredentialStore } from "./stock-account-rename.js";
 import { reloginStockAccount, type ReloginInteraction, type ReloginRuntime } from "./stock-account-relogin.js";
 import { readStockUsage, type CodexUsageRequest } from "./stock-usage.js";
 
@@ -28,10 +26,12 @@ export interface StockAccountCommandOutput {
 
 type JsonRecord = Readonly<Record<string, unknown>>;
 
+function isRecord(value: unknown): value is JsonRecord {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function record(value: unknown): JsonRecord | undefined {
-	return typeof value === "object" && value !== null && !Array.isArray(value)
-		? (value as JsonRecord)
-		: undefined;
+	return isRecord(value) ? value : undefined;
 }
 
 function stringField(value: JsonRecord, key: string): string | undefined {
@@ -113,7 +113,7 @@ export async function runStockAccountCommand(
 				const from = args[2];
 				const to = args[3];
 				if (!from || !to) return usage();
-				await renameStockAccount(deps.store, provider, from, to);
+				await renameStockAccount({ store: deps.store, provider, from, to });
 				return { text: "Renamed " + provider + " account '" + from + "' to '" + to + "'.", level: "info" };
 			}
 			case "relogin": {

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import * as stockAccounts from "../src/core/stock-accounts.js";
+import { renameStockAccount } from "../src/core/stock-account-rename.js";
 
 class FakeCredentialStore {
 	constructor(public current: unknown) {}
+
+	async read(): Promise<unknown> { return structuredClone(this.current); }
 
 	async modify(
 		_provider: string,
@@ -19,9 +21,7 @@ async function rename(
 	from: string,
 	to: string,
 ): Promise<void> {
-	const candidate = Reflect.get(stockAccounts, "renameStockAccount");
-	if (typeof candidate !== "function") throw new Error("renameStockAccount is not implemented");
-	await Reflect.apply(candidate, undefined, [store, provider, from, to]);
+	await renameStockAccount({ store, provider, from, to });
 }
 
 function pooledCredential() {
