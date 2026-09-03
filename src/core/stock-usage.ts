@@ -4,6 +4,7 @@ import type { StockAccountProvider } from "./stock-accounts.js";
 
 const CODEX_USAGE_ENDPOINT = "https://chatgpt.com/backend-api/wham/usage";
 const CLAUDE_USAGE_ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
+const GROK_USAGE_ENDPOINT = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
 const ALIBABA_USAGE_ENDPOINT = "https://bailian-singapore-cs.alibabacloud.com/cli/api.json";
 const ALIBABA_USAGE_API = "zeldaHttp.apikeyMgr./tokenplan/personal/api/v2/usage";
 const FIVE_HOURS_SECONDS = 18_000;
@@ -84,7 +85,7 @@ function readCredentials(agentDir: string): ReadonlyMap<StockAccountProvider, re
 	const auth = record(JSON.parse(readFileSync(path, "utf8")));
 	if (!auth) return new Map();
 	const result = new Map<StockAccountProvider, readonly StoredCredentialSlot[]>();
-	for (const provider of ["claude-sdk-oauth", "openai-codex", "alibaba-token-plan"] as const) {
+	for (const provider of ["xai", "claude-sdk-oauth", "openai-codex", "alibaba-token-plan"] as const) {
 		const credential = record(auth[provider]);
 		const kind = stringField(credential ?? {}, "type");
 		if (!credential || (kind !== "oauth" && kind !== "api_key")) continue;
@@ -170,6 +171,13 @@ function parseClaudeUsage(value: unknown): ClaudeUsage | null {
 		: { fiveHourRemainingPercent, weeklyRemainingPercent };
 }
 
+function parseGrokUsage(value: unknown): number | undefined {
+	const body = record(value);
+	const config = record(property(body, "config"));
+	const used = usageNumber(property(config, "creditUsagePercent"));
+	return used === undefined ? undefined : Math.round(100 - Math.max(0, Math.min(100, used)));
+}
+
 interface AlibabaUsage {
 	readonly fiveHourRemainingPercent: number | undefined;
 	readonly weeklyRemainingPercent: number | undefined;
@@ -227,6 +235,41 @@ async function oauthUsageDetail(
 	return "5h " + formatPercent(usage.fiveHourRemainingPercent) + " | 7d " + formatPercent(usage.weeklyRemainingPercent);
 }
 
+function grokUserId(access: string): string | undefined {
+	const payload = access.split(".")[1];
+	if (!payload) return undefined;
+	try {
+		const claims = record(JSON.parse(Buffer.from(payload, "base64url").toString("utf8")));
+		return stringField(claims ?? {}, "principal_id") ?? stringField(claims ?? {}, "sub");
+	} catch {
+		return undefined;
+	}
+}
+
+async function grokUsageDetail(
+	access: string,
+	request: UsageRequest,
+	signal?: AbortSignal,
+): Promise<string> {
+	const userId = grokUserId(access);
+	if (!userId) return "usage unavailable (user id missing)";
+	const response = await request(GROK_USAGE_ENDPOINT, {
+		headers: {
+			Authorization: "Bearer " + access,
+			"X-XAI-Token-Auth": "xai-grok-cli",
+			"x-userid": userId,
+			"x-grok-client-mode": "headless",
+		},
+		redirect: "error",
+		signal: signal ?? AbortSignal.timeout(10_000),
+	});
+	if (!response.ok) return "usage unavailable (HTTP " + response.status + ")";
+	const remaining = parseGrokUsage(await response.json());
+	return remaining === undefined
+		? "usage unavailable (invalid response)"
+		: "credits " + formatPercent(remaining) + " remaining";
+}
+
 async function alibabaUsageDetail(
 	key: string,
 	request: UsageRequest,
@@ -270,6 +313,17 @@ export async function readStockUsage(agentDir: string, options: StockUsageOption
 	const result = new Map<string, string>();
 	const credentials = readCredentials(agentDir);
 	const request = options.usageRequest ?? ((input, init) => fetch(input, init));
+	await Promise.all((credentials.get("xai") ?? []).map(async (slot) => {
+		let detail = "usage unavailable (credential missing)";
+		if (slot.access) {
+			try {
+				detail = await grokUsageDetail(slot.access, request, options.signal);
+			} catch {
+				detail = "usage unavailable";
+			}
+		}
+		result.set(stockUsageKey("xai", slot.name), detail);
+	}));
 	await Promise.all((credentials.get("claude-sdk-oauth") ?? []).map(async (slot) => {
 		let detail = "usage unavailable (credential missing)";
 		if (slot.access) {

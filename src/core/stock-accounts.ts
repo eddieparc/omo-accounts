@@ -19,7 +19,7 @@ type StockPooledCredential = {
 	readonly pinned?: string;
 };
 
-export const STOCK_ACCOUNT_PROVIDERS = ["claude-sdk-oauth", "openai-codex", "alibaba-token-plan"] as const;
+export const STOCK_ACCOUNT_PROVIDERS = ["xai", "claude-sdk-oauth", "openai-codex", "alibaba-token-plan"] as const;
 export type StockAccountProvider = (typeof STOCK_ACCOUNT_PROVIDERS)[number];
 
 export interface StockAccountStatus {

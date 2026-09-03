@@ -16,6 +16,13 @@ function sandbox(auth: Record<string, unknown>, poolState?: Record<string, unkno
 
 const ctx = (agentDir: string) => ({ env: {} as NodeJS.ProcessEnv, agentDir });
 
+function grokToken(userId: string): string {
+	const payload = Buffer.from(
+		JSON.stringify({ sub: userId, principal_id: userId, principal_type: "User" }),
+	).toString("base64url");
+	return "header." + payload + ".signature";
+}
+
 afterEach(() => {
 	for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
@@ -254,6 +261,37 @@ describe("stock subscription usage", () => {
 			"https://bailian-singapore-cs.alibabacloud.com/cli/api.json",
 			expect.objectContaining({
 				headers: expect.objectContaining({ Authorization: "Bearer alibaba-key" }),
+			}),
+		);
+	});
+
+	it("fetches Grok OAuth credit usage for the xai credential", async () => {
+		const agentDir = sandbox({
+			xai: { type: "oauth", access: grokToken("grok-user") },
+		});
+		const request = vi.fn(async () => ({
+			ok: true,
+			status: 200,
+			json: async () => ({
+				subscriptionTier: "SuperGrok",
+				config: {
+					creditUsagePercent: 37,
+					currentPeriod: { end: "2026-09-10T00:00:00Z" },
+				},
+			}),
+		}));
+
+		const report = await buildUsageReport([], ctx(agentDir), { usageRequest: request });
+
+		expect(report).toMatch(/xai\s+default\s+login\s+available\s+credits 63% remaining/);
+		expect(request).toHaveBeenCalledWith(
+			"https://cli-chat-proxy.grok.com/v1/billing?format=credits",
+			expect.objectContaining({
+				headers: expect.objectContaining({
+					Authorization: "Bearer " + grokToken("grok-user"),
+					"x-userid": "grok-user",
+					"X-XAI-Token-Auth": "xai-grok-cli",
+				}),
 			}),
 		);
 	});

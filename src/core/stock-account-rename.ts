@@ -42,7 +42,7 @@ const STOCK_ACCOUNT_NAME = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/;
 
 export function isStockAccountProvider(
 	provider: string,
-): provider is Exclude<StockAccountProvider, "alibaba-token-plan"> {
+): provider is Exclude<StockAccountProvider, "xai" | "alibaba-token-plan"> {
 	return provider === "claude-sdk-oauth" || provider === "openai-codex";
 }
 
