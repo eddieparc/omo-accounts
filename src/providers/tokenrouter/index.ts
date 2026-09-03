@@ -27,12 +27,9 @@ export function tokenrouterProviderPackage(): ProviderPackage {
 	return {
 		id: TOKENROUTER_PROVIDER_ID,
 		label: "TokenRouter",
-		enabled(_env, context?: ProviderBuildContext) {
-			if (!context) return true;
-			return resolveKey(context)
-				? true
-				: "no TokenRouter credential; run `/login tokenrouter` or set TOKENROUTER_API_KEY";
-		},
+		// Keep the provider registered without a key so senpi can expose
+		// `/login tokenrouter` and collect the first credential interactively.
+		enabled: () => true,
 		build(context: ProviderBuildContext): ProviderConfig {
 			const apiKey = resolveKey(context);
 			return {
