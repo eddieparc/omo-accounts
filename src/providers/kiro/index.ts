@@ -18,6 +18,7 @@ import {
 	buildKiroProviderConfig,
 	type KiroProviderDeps,
 	readKiroHeadroom,
+	readKiroUsage,
 	slotToTokens,
 	tokensToSlot,
 } from "./provider.js";
@@ -260,6 +261,19 @@ export function kiroProviderPackage(deps: KiroProviderDeps = {}): ProviderPackag
 			// "unknown".
 			const entries = await Promise.all(
 				state.accounts.map(async (slot) => [slot.name, await readKiroHeadroom(slot)] as const),
+			);
+			return Object.fromEntries(entries);
+		},
+		async accountUsageDetails(context) {
+			const state = readPool(context.agentDir, KIRO_PROVIDER_ID);
+			const entries = await Promise.all(
+				state.accounts.map(async (slot) => {
+					const usage = await readKiroUsage(slot);
+					if (!usage) return [slot.name, {}] as const;
+					const remaining =
+						usage.limitCount > 0 ? Math.max(0, 1 - usage.usedCount / usage.limitCount) : undefined;
+					return [slot.name, { remaining, plan: usage.plan, resetAt: usage.resetAt }] as const;
+				}),
 			);
 			return Object.fromEntries(entries);
 		},

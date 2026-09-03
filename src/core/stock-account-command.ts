@@ -8,7 +8,7 @@ import { reloginStockAccount, type ReloginInteraction, type ReloginRuntime } fro
 import { readStockUsage, type CodexUsageRequest } from "./stock-usage.js";
 
 export interface StockAccountCommandRuntime extends ReloginRuntime {
-	getAuth?(provider: string, options: { readonly slotName: string }): Promise<unknown>;
+	getAuth?(provider: string): Promise<unknown>;
 }
 
 export interface StockAccountCommandDeps {
@@ -71,9 +71,9 @@ function defaultInteraction(): ReloginInteraction {
 	};
 }
 
-async function resolvedCodexToken(runtime: StockAccountCommandRuntime, name: string): Promise<string | undefined> {
+async function resolvedCodexToken(runtime: StockAccountCommandRuntime, _name: string): Promise<string | undefined> {
 	if (!runtime.getAuth) return undefined;
-	const result = record(await runtime.getAuth("openai-codex", { slotName: name }));
+	const result = record(await runtime.getAuth("openai-codex"));
 	const auth = record(result?.auth);
 	return auth ? stringField(auth, "apiKey") : undefined;
 }

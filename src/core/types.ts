@@ -27,6 +27,12 @@ export interface ProviderBuildContext {
 	readonly agentDir: string;
 }
 
+export interface ProviderUsageDetail {
+	readonly remaining?: number;
+	readonly plan?: string;
+	readonly resetAt?: number;
+}
+
 /**
  * A provider package. Each lives in its own directory under `src/providers/`,
  * owns its credentials and failure modes, and never imports a sibling.
@@ -54,4 +60,5 @@ export interface ProviderPackage {
 	 * the usage dashboard. Absent or throwing means "unknown".
 	 */
 	accountUsage?(context: ProviderBuildContext): Promise<Record<string, number | undefined>>;
+	accountUsageDetails?(context: ProviderBuildContext): Promise<Record<string, ProviderUsageDetail>>;
 }
