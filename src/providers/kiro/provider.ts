@@ -14,7 +14,7 @@ import {
 	KIRO_UPSTREAM_URL,
 	resolveModels,
 } from "./config.js";
-import { fetchKiroUsage, type KiroTokens, refreshKiro } from "./oauth.js";
+import { fetchKiroUsage, type KiroTokens, type KiroUsage, refreshKiro } from "./oauth.js";
 import { DebugLogger } from "./vendor/debug-logger.js";
 import { createKiroStream } from "./vendor/kiro.js";
 
@@ -181,6 +181,15 @@ export async function readKiroHeadroom(
 	slot: AccountSlot,
 	deps: { refresh?: (tokens: KiroTokens) => Promise<KiroTokens> } = {},
 ): Promise<number | undefined> {
+	const usage = await readKiroUsage(slot, deps);
+	if (!usage || usage.limitCount <= 0) return undefined;
+	return Math.max(0, 1 - usage.usedCount / usage.limitCount);
+}
+
+export async function readKiroUsage(
+	slot: AccountSlot,
+	deps: { refresh?: (tokens: KiroTokens) => Promise<KiroTokens> } = {},
+): Promise<KiroUsage | undefined> {
 	const refreshTokens = deps.refresh ?? refreshKiro;
 	let tokens = slotToTokens(slot);
 	if (Date.now() + KIRO_USAGE_TOKEN_REFRESH_SKEW_MS >= slot.expires) {
@@ -191,9 +200,7 @@ export async function readKiroHeadroom(
 		}
 	}
 	try {
-		const usage = await fetchKiroUsage(tokens);
-		if (usage.limitCount <= 0) return undefined;
-		return Math.max(0, 1 - usage.usedCount / usage.limitCount);
+		return await fetchKiroUsage(tokens);
 	} catch {
 		return undefined;
 	}

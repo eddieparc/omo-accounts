@@ -179,4 +179,25 @@ describe("stock subscription usage", () => {
 		expect(report).toMatch(/openai-codex\s+default.*usage unavailable \(HTTP 401\)/);
 		expect(report).not.toContain("refresh-denied");
 	});
+
+	it("includes live addon plan and reset details", async () => {
+		const agentDir = sandbox({
+			kiro: {
+				type: "oauth",
+				accounts: [{ name: "default" }],
+			},
+		});
+		const provider = {
+			id: "kiro",
+			label: "Kiro",
+			build: () => ({}) as never,
+			accountUsageDetails: async () => ({
+				default: { remaining: 0.72, plan: "KIRO PRO", resetAt: 1_800_000_000_000 },
+			}),
+		};
+
+		const report = await buildUsageReport([provider], ctx(agentDir));
+
+		expect(report).toContain("72% remaining (KIRO PRO), resets");
+	});
 });
