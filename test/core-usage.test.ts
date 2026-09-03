@@ -1,7 +1,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildUsageReport } from "../src/core/usage.js";
 
 function sandbox(auth: unknown, failoverState?: unknown): string {
@@ -93,6 +93,13 @@ describe("usage dashboard", () => {
 		expect(await buildUsageReport([], ctx(dir))).toContain("opencode-go");
 	});
 
+	it("does not crash when auth.json is malformed", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "senpi-usage-"));
+		writeFileSync(join(dir, "auth.json"), "{not json");
+
+		await expect(buildUsageReport([], ctx(dir))).resolves.toContain("No subscriptions found");
+	});
+
 	it("lists an addon provider that has no account pool, rather than hiding it", async () => {
 		// A single-credential addon provider (tokenrouter) produces no per-account
 		// lines, so filtering its auth.json row out as "addon-managed" would drop the
@@ -101,5 +108,30 @@ describe("usage dashboard", () => {
 		const poolless = { id: "tokenrouter", label: "TokenRouter", build: () => ({}) as never };
 
 		expect(await buildUsageReport([poolless], ctx(dir))).toContain("tokenrouter");
+	});
+
+	it("includes live plan and reset details when an addon exposes them", async () => {
+		const dir = sandbox({});
+		const provider = {
+			id: "kiro",
+			label: "Kiro",
+			build: () => ({}) as never,
+			accountUsage: vi.fn(async () => ({ default: 0.72 })),
+			accountUsageDetails: vi.fn(async () => ({
+				default: { remaining: 0.72, plan: "KIRO PRO", resetAt: 1_800_000_000_000 },
+			})),
+		};
+		writeFileSync(
+			join(dir, "auth.json"),
+			JSON.stringify({
+				kiro: {
+					type: "oauth",
+					accounts: [{ name: "default" }],
+				},
+			}),
+		);
+
+		const report = await buildUsageReport([provider], ctx(dir));
+		expect(report).toContain("72% remaining (KIRO PRO), resets");
 	});
 });

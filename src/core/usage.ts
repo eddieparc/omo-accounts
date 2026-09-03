@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { isBlocked } from "./accounts.js";
 import { readPool } from "./store.js";
-import type { ProviderBuildContext, ProviderPackage } from "./types.js";
+import type { ProviderBuildContext, ProviderPackage, ProviderUsageDetail } from "./types.js";
 
 /**
  * Usage dashboard.
@@ -97,11 +97,26 @@ async function addonLines(
 ): Promise<ProviderUsageLine[]> {
 	const results = await Promise.all(
 		packages.map(async (entry): Promise<ProviderUsageLine[]> => {
-			const pool = readPool(context.agentDir, entry.id);
+			let pool: ReturnType<typeof readPool>;
+			try {
+				pool = readPool(context.agentDir, entry.id);
+			} catch {
+				// `readPool` refuses to overwrite a corrupt credential file. The
+				// read-only dashboard should degrade instead of taking down `/usage`.
+				return [];
+			}
 			if (pool.accounts.length === 0) return [];
 
 			let usage: Record<string, number | undefined> = {};
-			if (entry.accountUsage) {
+			let details: Record<string, ProviderUsageDetail> = {};
+			if (entry.accountUsageDetails) {
+				try {
+					details = await entry.accountUsageDetails(context);
+				} catch {
+					details = {};
+				}
+			}
+			if (entry.accountUsage && Object.keys(details).length === 0) {
 				try {
 					usage = await entry.accountUsage(context);
 				} catch {
@@ -111,14 +126,17 @@ async function addonLines(
 
 			const now = Date.now();
 			return pool.accounts.map((slot) => {
-				const headroom = usage[slot.name];
+				const metadata = details[slot.name];
+				const headroom = metadata?.remaining ?? usage[slot.name];
 				const state =
 					slot.blockReason === "auth_error"
 						? "needs re-login"
 						: isBlocked(slot, now)
 							? `blocked ${Math.ceil(((slot.blockedUntil ?? now) - now) / 1000)}s (${slot.blockReason ?? "unknown"})`
 							: "available";
-				const left = typeof headroom === "number" ? `${percent(headroom)} remaining, ` : "";
+				const plan = metadata?.plan ? ` (${metadata.plan})` : "";
+				const resets = metadata?.resetAt ? `, resets ${new Date(metadata.resetAt).toLocaleString()}` : "";
+				const left = typeof headroom === "number" ? `${percent(headroom)} remaining${plan}${resets}, ` : "";
 				return { provider: entry.id, detail: `${slot.name}: ${left}${state}` };
 			});
 		}),
