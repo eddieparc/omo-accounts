@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildUsageReport } from "../src/core/usage.js";
 
 const dirs: string[] = [];
@@ -105,11 +105,11 @@ function codexToken(accountId: string): string {
 const buildWithUsage = buildUsageReport as unknown as (
 	packages: readonly never[],
 	context: ReturnType<typeof ctx>,
-	options: { readonly codexUsageRequest: FakeUsageRequest },
+	options: { readonly codexUsageRequest?: FakeUsageRequest; readonly usageRequest?: FakeUsageRequest },
 ) => Promise<string>;
 
 describe("stock subscription usage", () => {
-	it("reports Codex limits per slot and never probes Claude", async () => {
+	it("reports Claude and Codex limits per slot", async () => {
 		// Given: one Claude account and two Codex accounts with distinct account ids.
 		const agentDir = sandbox({
 			"claude-sdk-oauth": {
@@ -152,9 +152,9 @@ describe("stock subscription usage", () => {
 		// When: usage is built through the injectable HTTP seam.
 		const report = await buildWithUsage([], ctx(agentDir), { codexUsageRequest: request });
 
-		// Then: Codex is numeric per account while Claude is explicit and unprobed.
+		// Then: both stock OAuth providers expose bounded usage details.
 		expect(calledAccounts).toEqual(["acct-default", "acct-work"]);
-		expect(report).toMatch(/claude-sdk-oauth\s+default.*quota unavailable \(no supported endpoint\)/);
+		expect(report).toMatch(/claude-sdk-oauth\s+default.*usage unavailable \(HTTP 429\)/);
 		expect(report).toMatch(/openai-codex\s+default.*5h 80%.*W 60%/);
 		expect(report).toMatch(/openai-codex\s+work.*5h 55%.*W 25%/);
 		expect(report).not.toContain("codex-default-refresh");
@@ -198,6 +198,76 @@ describe("stock subscription usage", () => {
 
 		const report = await buildUsageReport([provider], ctx(agentDir));
 
-		expect(report).toContain("72% remaining (KIRO PRO), resets");
+	expect(report).toContain("72% remaining (KIRO PRO), resets");
+	});
+
+	it("fetches Claude SDK OAuth quota instead of reporting it as unsupported", async () => {
+		const agentDir = sandbox({
+			"claude-sdk-oauth": { type: "oauth", access: "claude-access" },
+		});
+		const request = vi.fn(async (input: string) => ({
+			ok: true,
+			status: 200,
+			json: async () => ({
+				five_hour: { utilization: 25, resets_at: "2026-09-03T15:00:00Z" },
+				seven_day: { utilization: 40, resets_at: "2026-09-10T00:00:00Z" },
+			}),
+			input,
+		}));
+
+		const report = await buildUsageReport([], ctx(agentDir), { usageRequest: request });
+
+		expect(report).toContain("claude-sdk-oauth  default  login  available  5h 75% | 7d 60%");
+		expect(request).toHaveBeenCalledWith(
+			"https://api.anthropic.com/api/oauth/usage",
+			expect.objectContaining({
+				headers: expect.objectContaining({ Authorization: "Bearer claude-access" }),
+			}),
+		);
+	});
+
+	it("fetches Alibaba Token Plan quota for its API-key credential", async () => {
+		const agentDir = sandbox({
+			"alibaba-token-plan": { type: "api_key", key: "alibaba-key" },
+		});
+		const request = vi.fn(async () => ({
+			ok: true,
+			status: 200,
+			json: async () => ({
+				data: {
+					DataV2: {
+						data: {
+							per5HourPercentage: 12,
+							per1WeekPercentage: 34,
+							per5HourResetTime: 1_800_000_000_000,
+							per1WeekResetTime: 1_801_000_000_000,
+						},
+					},
+				},
+			}),
+		}));
+
+		const report = await buildUsageReport([], ctx(agentDir), { usageRequest: request });
+
+		expect(report).toContain("alibaba-token-plan  default  login  available  5h 88% | W 66%");
+		expect(request).toHaveBeenCalledWith(
+			"https://bailian-singapore-cs.alibabacloud.com/cli/api.json",
+			expect.objectContaining({
+				headers: expect.objectContaining({ Authorization: "Bearer alibaba-key" }),
+			}),
+		);
+	});
+
+	it("keeps provider usage bounded when quota payloads are malformed", async () => {
+		const agentDir = sandbox({
+			"claude-sdk-oauth": { type: "oauth", access: "claude-access" },
+			"alibaba-token-plan": { type: "api_key", key: "alibaba-key" },
+		});
+		const request = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({}) }));
+
+		const report = await buildUsageReport([], ctx(agentDir), { usageRequest: request });
+
+		expect(report).toMatch(/claude-sdk-oauth\s+default\s+login\s+available\s+usage unavailable \(invalid response\)/);
+		expect(report).toMatch(/alibaba-token-plan\s+default\s+login\s+available\s+usage unavailable \(invalid response\)/);
 	});
 });

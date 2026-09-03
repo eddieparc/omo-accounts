@@ -3,6 +3,9 @@ import { join } from "node:path";
 import type { StockAccountProvider } from "./stock-accounts.js";
 
 const CODEX_USAGE_ENDPOINT = "https://chatgpt.com/backend-api/wham/usage";
+const CLAUDE_USAGE_ENDPOINT = "https://api.anthropic.com/api/oauth/usage";
+const ALIBABA_USAGE_ENDPOINT = "https://bailian-singapore-cs.alibabacloud.com/cli/api.json";
+const ALIBABA_USAGE_API = "zeldaHttp.apikeyMgr./tokenplan/personal/api/v2/usage";
 const FIVE_HOURS_SECONDS = 18_000;
 const WEEK_SECONDS = 604_800;
 
@@ -18,13 +21,19 @@ export interface UsageRequestInit {
 	readonly headers: Readonly<Record<string, string>>;
 	readonly redirect: "error";
 	readonly signal: AbortSignal;
+	readonly method?: "POST";
+	readonly body?: string;
 }
 
 export type CodexUsageRequest = (input: string, init: UsageRequestInit) => Promise<UsageResponse>;
+export type UsageRequest = (input: string, init: UsageRequestInit) => Promise<UsageResponse>;
 
 export interface StockUsageOptions {
 	readonly codexUsageRequest?: CodexUsageRequest;
+	readonly usageRequest?: UsageRequest;
 	readonly resolveCodexAccessToken?: (name: string) => Promise<string | undefined>;
+	/** Optional Alibaba console bearer token; API keys cannot authenticate console quota calls. */
+	readonly alibabaUsageToken?: string;
 	readonly signal?: AbortSignal;
 }
 
@@ -62,17 +71,29 @@ function credentialSlots(credential: JsonRecord): CredentialSlot[] {
 	return [{ name: "default", access: stringField(credential, "access") }];
 }
 
-function readCredentials(agentDir: string): ReadonlyMap<StockAccountProvider, readonly CredentialSlot[]> {
+type CredentialKind = "oauth" | "api_key";
+
+interface StoredCredentialSlot extends CredentialSlot {
+	readonly key: string | undefined;
+	readonly kind: CredentialKind;
+}
+
+function readCredentials(agentDir: string): ReadonlyMap<StockAccountProvider, readonly StoredCredentialSlot[]> {
 	const path = join(agentDir, "auth.json");
 	if (!existsSync(path)) return new Map();
 	const auth = record(JSON.parse(readFileSync(path, "utf8")));
 	if (!auth) return new Map();
-	const result = new Map<StockAccountProvider, readonly CredentialSlot[]>();
-	for (const provider of ["claude-sdk-oauth", "openai-codex"] as const) {
+	const result = new Map<StockAccountProvider, readonly StoredCredentialSlot[]>();
+	for (const provider of ["claude-sdk-oauth", "openai-codex", "alibaba-token-plan"] as const) {
 		const credential = record(auth[provider]);
-		if (credential && stringField(credential, "type") === "oauth") {
-			result.set(provider, credentialSlots(credential));
-		}
+		const kind = stringField(credential ?? {}, "type");
+		if (!credential || (kind !== "oauth" && kind !== "api_key")) continue;
+		const slots: StoredCredentialSlot[] = credentialSlots(credential).map((slot) => ({
+			...slot,
+			key: slot.access ?? stringField(credential, "key"),
+			kind: kind as CredentialKind,
+		}));
+		result.set(provider, slots);
 	}
 	return result;
 }
@@ -116,6 +137,57 @@ export function extractCodexAccountId(token: string): string | undefined {
 	}
 }
 
+function usageNumber(value: unknown): number | undefined {
+	return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function unwrapUsage(value: unknown): JsonRecord | undefined {
+	let current = record(value);
+	for (let index = 0; current && index < 3; index++) {
+		const nested = record(property(record(property(current, "data")), "DataV2"));
+		if (!nested) return current;
+		current = record(property(nested, "data")) ?? nested;
+	}
+	return current;
+}
+
+interface ClaudeUsage {
+	readonly fiveHourRemainingPercent: number | undefined;
+	readonly weeklyRemainingPercent: number | undefined;
+}
+
+function parseClaudeUsage(value: unknown): ClaudeUsage | null {
+	const body = record(value);
+	if (!body) return null;
+	const window = (key: string): number | undefined => {
+		const utilization = usageNumber(property(body, key) && property(property(body, key), "utilization"));
+		return utilization === undefined ? undefined : Math.round(100 - Math.max(0, Math.min(100, utilization)));
+	};
+	const fiveHourRemainingPercent = window("five_hour");
+	const weeklyRemainingPercent = window("seven_day");
+	return fiveHourRemainingPercent === undefined && weeklyRemainingPercent === undefined
+		? null
+		: { fiveHourRemainingPercent, weeklyRemainingPercent };
+}
+
+interface AlibabaUsage {
+	readonly fiveHourRemainingPercent: number | undefined;
+	readonly weeklyRemainingPercent: number | undefined;
+}
+
+function parseAlibabaUsage(value: unknown): AlibabaUsage | null {
+	const body = unwrapUsage(value);
+	if (!body) return null;
+	const fiveHour = usageNumber(body.per5HourPercentage);
+	const weekly = usageNumber(body.per1WeekPercentage);
+	return fiveHour === undefined && weekly === undefined
+		? null
+		: {
+				fiveHourRemainingPercent: fiveHour === undefined ? undefined : Math.round(100 - Math.max(0, Math.min(100, fiveHour))),
+				weeklyRemainingPercent: weekly === undefined ? undefined : Math.round(100 - Math.max(0, Math.min(100, weekly))),
+			};
+}
+
 function formatPercent(value: number | undefined): string {
 	return value === undefined ? "unavailable" : value + "%";
 }
@@ -135,6 +207,61 @@ async function codexUsageDetail(access: string, request: CodexUsageRequest, sign
 	return "5h " + formatPercent(usage.fiveHourRemainingPercent) + " | W " + formatPercent(usage.weeklyRemainingPercent);
 }
 
+async function oauthUsageDetail(
+	access: string,
+	request: UsageRequest,
+	signal?: AbortSignal,
+): Promise<string> {
+	const response = await request(CLAUDE_USAGE_ENDPOINT, {
+		headers: {
+			Authorization: "Bearer " + access,
+			"anthropic-beta": "oauth-2025-04-20",
+			"User-Agent": "claude-code",
+		},
+		redirect: "error",
+		signal: signal ?? AbortSignal.timeout(10_000),
+	});
+	if (!response.ok) return "usage unavailable (HTTP " + response.status + ")";
+	const usage = parseClaudeUsage(await response.json());
+	if (!usage) return "usage unavailable (invalid response)";
+	return "5h " + formatPercent(usage.fiveHourRemainingPercent) + " | 7d " + formatPercent(usage.weeklyRemainingPercent);
+}
+
+async function alibabaUsageDetail(
+	key: string,
+	request: UsageRequest,
+	signal?: AbortSignal,
+): Promise<string> {
+	const params = JSON.stringify({
+		Api: ALIBABA_USAGE_API,
+		V: "1.0",
+		Data: {
+			cornerstoneParam: {
+				protocol: "V2",
+				console: "ONE_CONSOLE",
+				productCode: "p_efm",
+				switchUserType: 3,
+				consoleSite: "BAILIAN_ALIYUN",
+			},
+		},
+	});
+	const response = await request(ALIBABA_USAGE_ENDPOINT, {
+		headers: {
+			Accept: "*/*",
+			Authorization: "Bearer " + key,
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		redirect: "error",
+		signal: signal ?? AbortSignal.timeout(10_000),
+		method: "POST",
+		body: new URLSearchParams({ params, region: "ap-southeast-1" }).toString(),
+	});
+	if (!response.ok) return "usage unavailable (HTTP " + response.status + ")";
+	const usage = parseAlibabaUsage(await response.json());
+	if (!usage) return "usage unavailable (invalid response)";
+	return "5h " + formatPercent(usage.fiveHourRemainingPercent) + " | W " + formatPercent(usage.weeklyRemainingPercent);
+}
+
 export function stockUsageKey(provider: StockAccountProvider, name: string): string {
 	return provider + "\0" + name;
 }
@@ -142,17 +269,38 @@ export function stockUsageKey(provider: StockAccountProvider, name: string): str
 export async function readStockUsage(agentDir: string, options: StockUsageOptions = {}): Promise<ReadonlyMap<string, string>> {
 	const result = new Map<string, string>();
 	const credentials = readCredentials(agentDir);
-	for (const slot of credentials.get("claude-sdk-oauth") ?? []) {
-		result.set(stockUsageKey("claude-sdk-oauth", slot.name), "quota unavailable (no supported endpoint)");
-	}
-	const request = options.codexUsageRequest ?? ((input, init) => fetch(input, init));
+	const request = options.usageRequest ?? ((input, init) => fetch(input, init));
+	await Promise.all((credentials.get("claude-sdk-oauth") ?? []).map(async (slot) => {
+		let detail = "usage unavailable (credential missing)";
+		if (slot.access) {
+			try {
+				detail = await oauthUsageDetail(slot.access, request, options.signal);
+			} catch {
+				detail = "usage unavailable";
+			}
+		}
+		result.set(stockUsageKey("claude-sdk-oauth", slot.name), detail);
+	}));
+	await Promise.all((credentials.get("alibaba-token-plan") ?? []).map(async (slot) => {
+		let detail = "usage unavailable (credential missing)";
+		const usageToken = options.alibabaUsageToken ?? process.env.ALIBABA_TOKEN_PLAN_CONSOLE_TOKEN ?? slot.key;
+		if (usageToken) {
+			try {
+				detail = await alibabaUsageDetail(usageToken, request, options.signal);
+			} catch {
+				detail = "usage unavailable";
+			}
+		}
+		result.set(stockUsageKey("alibaba-token-plan", slot.name), detail);
+	}));
+	const codexRequest = options.codexUsageRequest ?? ((input, init) => fetch(input, init));
 	await Promise.all((credentials.get("openai-codex") ?? []).map(async (slot) => {
 		const storedAccess = slot.access;
 		const access = options.resolveCodexAccessToken ? await options.resolveCodexAccessToken(slot.name) : storedAccess;
 		let detail = "usage unavailable (credential missing)";
 		if (access) {
 			try {
-				detail = await codexUsageDetail(access, request, options.signal);
+				detail = await codexUsageDetail(access, codexRequest, options.signal);
 			} catch {
 				detail = "usage unavailable";
 			}
