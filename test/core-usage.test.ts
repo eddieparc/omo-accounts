@@ -38,6 +38,20 @@ describe("usage dashboard", () => {
 		expect(await buildUsageReport([], ctx(dir))).toContain("anthropic");
 	});
 
+	it("reports Claude, OpenAI Codex, and xAI OAuth subscriptions together", async () => {
+		const dir = sandbox({
+			"claude-sdk-oauth": { type: "oauth", access: "claude-a", refresh: "claude-r", expires: 1 },
+			"openai-codex": { type: "oauth", access: "codex-a", refresh: "codex-r", expires: 1 },
+			xai: { type: "oauth", access: "xai-a", refresh: "xai-r", expires: 1 },
+		});
+
+		const report = await buildUsageReport([], ctx(dir));
+
+		expect(report).toContain("claude-sdk-oauth");
+		expect(report).toContain("openai-codex");
+		expect(report).toContain("xai");
+	});
+
 	it("counts available accounts for stock multi-account pools", async () => {
 		const dir = sandbox({
 			"claude-agent-sdk": {
