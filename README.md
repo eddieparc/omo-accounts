@@ -37,6 +37,11 @@ Load a checkout directly:
 omo -e /absolute/path/to/omo-accounts --list-models kiro
 ```
 
+`/usage` reports live Claude SDK OAuth usage and Alibaba Token Plan quota.
+Alibaba's quota endpoint belongs to the console gateway, so set
+`ALIBABA_TOKEN_PLAN_CONSOLE_TOKEN` to a current Alibaba console bearer token in
+addition to the Token Plan API key when using that provider.
+
 ## Kiro accounts
 
 Open the account manager:
