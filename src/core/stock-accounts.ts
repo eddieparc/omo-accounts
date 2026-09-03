@@ -19,7 +19,7 @@ type StockPooledCredential = {
 	readonly pinned?: string;
 };
 
-export const STOCK_ACCOUNT_PROVIDERS = ["claude-sdk-oauth", "openai-codex"] as const;
+export const STOCK_ACCOUNT_PROVIDERS = ["xai", "claude-sdk-oauth", "openai-codex", "alibaba-token-plan"] as const;
 export type StockAccountProvider = (typeof STOCK_ACCOUNT_PROVIDERS)[number];
 
 export interface StockAccountStatus {
@@ -98,7 +98,9 @@ export function readStockAccountStatus(agentDir: string, now = Date.now()): Stoc
 
 	for (const provider of STOCK_ACCOUNT_PROVIDERS) {
 		const credential = record(auth[provider]);
-		if (!credential || stringField(credential, "type") !== "oauth") continue;
+		if (!credential) continue;
+		const credentialType = stringField(credential, "type");
+		if (provider === "alibaba-token-plan" ? credentialType !== "api_key" : credentialType !== "oauth") continue;
 		const pinned = stringField(credential, "pinned");
 		for (const [index, slot] of storedSlots(credential).entries()) {
 			const name = stringField(slot, "name") ?? (index === 0 ? "default" : undefined);

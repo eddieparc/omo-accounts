@@ -37,6 +37,11 @@ Load a checkout directly:
 omo -e /absolute/path/to/omo-accounts --list-models kiro
 ```
 
+`/usage` reports live Claude SDK OAuth usage and Alibaba Token Plan quota.
+Alibaba's quota endpoint belongs to the console gateway, so set
+`ALIBABA_TOKEN_PLAN_CONSOLE_TOKEN` to a current Alibaba console bearer token in
+addition to the Token Plan API key when using that provider.
+
 ## Kiro accounts
 
 Open the account manager:
@@ -73,8 +78,8 @@ OpenGateway is always registered so `/login opengateway` can collect its API key
 /login opengateway
 ```
 
-TokenRouter registers after a credential exists. Set `TOKENROUTER_API_KEY`, or use
-the provider login flow in a run where it is explicitly loaded:
+TokenRouter is always registered so `/login tokenrouter` can collect its first
+API key. Set `TOKENROUTER_API_KEY`, or use the provider login flow:
 
 ```text
 /login tokenrouter

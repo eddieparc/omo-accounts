@@ -61,12 +61,10 @@ describe("tokenrouter provider package", () => {
 		expect((built as { apiKey?: string }).apiKey).toBe("sk-env");
 	});
 
-	it("skips registration when no credential exists rather than degrading the addon", () => {
+	it("registers without a credential so /login can collect the first key", () => {
 		const dir = agentDirWith({});
 		dirs.push(dir);
-		const reason = tokenrouterProviderPackage().enabled?.({}, { env: {}, agentDir: dir });
-		expect(typeof reason).toBe("string");
-		expect(reason).toMatch(/login tokenrouter/);
+		expect(tokenrouterProviderPackage().enabled?.({}, { env: {}, agentDir: dir })).toBe(true);
 	});
 
 	it("registers once a credential is present", () => {

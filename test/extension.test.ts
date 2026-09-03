@@ -137,7 +137,7 @@ describe("extension entry", () => {
 			else process.env.OMO_CODING_AGENT_DIR = previous;
 		}
 
-		expect([...pi.registered.keys()]).toEqual(["kiro", "opengateway"]);
+		expect([...pi.registered.keys()]).toEqual(["kiro", "opengateway", "tokenrouter"]);
 		const commands = pi.registerCommand.mock.calls.map((call) => call[0]);
 		expect(commands).toContain("usage");
 		expect(commands).toContain("omo-accounts");
